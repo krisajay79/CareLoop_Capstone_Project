@@ -1,0 +1,21 @@
+# Clinic Appointment No-Show Analysis & Intervention Strategy
+
+## Executive Summary
+1. **Part 1 (Data Exploration & Cleaning):** Across 1,020 historical clinic appointment records, the overall no-show rate is **21.7%**, with patients waiting more than 12 days from booking to appointment missing visits at nearly double the baseline rate (**30.8%**).
+2. **Part 2 (Data Analysis):** Analyzing clinic appointment no-shows, Hadapsar Care Centre (Pune) recorded a **27.3%** no-show rate across over 95 bookings. However, the absolute highest no-show rate across any location was **33.3%** at Gomti Nagar Care Point (Lucknow). Meanwhile, Edappally Medical Centre (Kochi) handled the highest volume with 142 appointments. Overall, the data shows that no-show rates increase as appointments are booked further in advance.
+3. **Part 3 (Predictive Modeling & Threshold Optimization):**  A scaled Logistic Regression achieves the highest 5-fold cross-validated ROC-AUC of **0.775**, outperforming tuned Random Forest classifier (**0.769**) and a Depth-3 Decision Tree (**0.680**). Lowering the decision threshold from 0.50 to **0.35** increased recall on high-risk appointments from **23.7%** to **55.1%** while boosting the F1-score from **0.333** to **0.557**.
+4. **Part 4 (Follow-up Note Classification):** Structured LLM extraction (V2 CRAFT prompt) on patient follow-up notes identified `forgot_or_no_reminder`, `distance_or_transport`, `work_or_schedule` and `other` (each with **20%**) as the primary root causes for missed visits, followed by `cost_or_fee` and `illness_or_emergency` (each with **10%**).
+
+## Business Recommendation
+To reduce the clinic's **21.7%** overall no-show rate without overwhelming front-desk staff, we recommend deploying the predictive warning model at a **0.35** probability threshold paired with targeted, root-cause interventions. Because a missed warning leaves an empty clinical slot while an extra reminder call costs only one minute, prioritizing high recall (**44.4%**) captures nearly half of the potential no-shows. Specifically, staff should trigger automated SMS reminders 48 hours in advance for flagged patients—directly addressing the **20%** of misses caused by `forgot_or_no_reminder` — while offering telehealth conversions or transit vouchers to high-risk patients traveling long distances (`distance_or_transport`, **20%**) or booking more than two weeks out (**30.8%** no-show rate).
+
+## Selected Model & Threshold Rationale
+* **Chosen Model:** **Logistic Regression (Pipeline)**
+* **Cross-Validated ROC-AUC:** **0.775**
+* **Selected Decision Threshold:** **0.35**
+* **Rationale:** The Logistic Regression (Pipeline) achieved the strongest discrimination across all candidate models during 5-fold cross-validation (`ROC-AUC = 0.775`), capturing non-linear interactions between lead time, clinic location, and prior attendance history without touching the held-out test set. Selecting the **0.35** threshold over the default 0.50 improved the F1-score to **0.557** and substantially increased recall to **55.1%**, aligning with the clinic's asymmetric cost structure where preventing an empty appointment slot far outweighs the minimal time cost of making an extra reminder call.
+
+## Key Limitations
+1. **Small Illustrative Sample of Follow-up Notes:** The 10 extracted follow-up notes serve as an illustration of root-cause categorization (`forgot_or_no_reminder`, `distance_or_transport`, `cost_or_fee`, `illness_or_emergency`, `work_or_schedule`, `other`) and cannot statistically represent the true distribution of missed-appointment reasons clinic-wide.
+2. **Patient Overlap Across Splits:** Because the train/test split was performed randomly rather than chronologically by appointment date, some test set appointments occur earlier than the latest training data. This introduces look-ahead bias, compromising the test set's integrity as truly unseen data.
+3. **Capacity-Dependent Threshold:** The optimal decision threshold of **0.35** assumes sufficient front-desk call capacity; in practice, the operational cutoff depends directly on daily staff availability and how many reminder calls can realistically be completed per shift.
